@@ -308,17 +308,17 @@ def end_session(req: gr.Request):
     shutil.rmtree(user_dir)
 
 
-def preprocess_images(images: List[Image.Image]) -> List[Image.Image]:
+def preprocess_images(images: list) -> list:
     """
-    Preprocess the input images.
+    Preprocess the input images from Gallery.
 
     Args:
-        images (List[Image.Image]): The input images.
+        images: List of (Image.Image, caption) tuples from gr.Gallery.
 
     Returns:
-        List[Image.Image]: The preprocessed images.
+        List of (Image.Image, caption) tuples with preprocessed images.
     """
-    return [pipeline.preprocess_image(img) for img in images]
+    return [(pipeline.preprocess_image(img), caption) for img, caption in images]
 
 
 def pack_state(latents: Tuple[SparseTensor, SparseTensor, int]) -> dict:
@@ -348,7 +348,7 @@ def get_seed(randomize_seed: bool, seed: int) -> int:
 
 
 def image_to_3d(
-    images: List[Image.Image],
+    images: list,
     seed: int,
     resolution: str,
     ss_guidance_strength: float,
@@ -367,8 +367,9 @@ def image_to_3d(
     progress=gr.Progress(track_tqdm=True),
 ) -> str:
     # --- Sampling ---
+    pil_images = [img for img, _ in images]
     outputs, latents = pipeline.run(
-        images,
+        pil_images,
         seed=seed,
         preprocess_image=False,
         sparse_structure_sampler_params={
@@ -564,11 +565,11 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
         with gr.Column(scale=1, min_width=172):
             examples = gr.Examples(
                 examples=[
-                    [f'assets/example_image/{image}']
+                    f'assets/example_image/{image}'
                     for image in os.listdir("assets/example_image")
                 ],
                 inputs=[image_prompt],
-                fn=lambda imgs: preprocess_images([Image.open(p) if isinstance(p, str) else p for p in imgs]),
+                fn=lambda img_path: [(pipeline.preprocess_image(Image.open(img_path)), None)],
                 outputs=[image_prompt],
                 run_on_click=True,
                 examples_per_page=18,

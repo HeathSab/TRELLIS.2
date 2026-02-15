@@ -26,17 +26,17 @@ def end_session(req: gr.Request):
     shutil.rmtree(user_dir)
 
 
-def preprocess_images(images: List[Image.Image]) -> List[Image.Image]:
+def preprocess_images(images: list) -> list:
     """
-    Preprocess the input images.
+    Preprocess the input images from Gallery.
 
     Args:
-        images (List[Image.Image]): The input images.
+        images: List of (Image.Image, caption) tuples from gr.Gallery.
 
     Returns:
-        List[Image.Image]: The preprocessed images.
+        List of (Image.Image, caption) tuples with preprocessed images.
     """
-    return [pipeline.preprocess_image(img) for img in images]
+    return [(pipeline.preprocess_image(img), caption) for img, caption in images]
 
 
 def get_seed(randomize_seed: bool, seed: int) -> int:
@@ -48,7 +48,7 @@ def get_seed(randomize_seed: bool, seed: int) -> int:
 
 def shapeimage_to_tex(
     mesh_file: str,
-    images: List[Image.Image],
+    images: list,
     seed: int,
     resolution: str,
     texture_size: int,
@@ -62,9 +62,10 @@ def shapeimage_to_tex(
     mesh = trimesh.load(mesh_file)
     if isinstance(mesh, trimesh.Scene):
         mesh = mesh.to_mesh()
+    pil_images = [img for img, _ in images]
     output = pipeline.run(
         mesh,
-        images,
+        pil_images,
         seed=seed,
         preprocess_image=False,
         tex_slat_sampler_params={
