@@ -156,12 +156,12 @@ class Trellis2TexturingPipeline(Pipeline):
         output = Image.fromarray((output * 255).astype(np.uint8))
         return output
         
-    def get_cond(self, image: Union[torch.Tensor, list[Image.Image]], resolution: int, include_neg_cond: bool = True) -> dict:
+    def get_cond(self, images: List[Image.Image], resolution: int, include_neg_cond: bool = True) -> dict:
         """
         Get the conditioning information for the model.
 
         Args:
-            image (Union[torch.Tensor, list[Image.Image]]): The image prompts.
+            images (List[Image.Image]): The image prompts for multi-image conditioning.
 
         Returns:
             dict: The conditioning information
@@ -169,7 +169,8 @@ class Trellis2TexturingPipeline(Pipeline):
         self.image_cond_model.image_size = resolution
         if self.low_vram:
             self.image_cond_model.to(self.device)
-        cond = self.image_cond_model(image)
+        cond = self.image_cond_model(images)
+        cond = cond.reshape(1, -1, cond.shape[-1])
         if self.low_vram:
             self.image_cond_model.cpu()
         if not include_neg_cond:
@@ -375,7 +376,7 @@ class Trellis2TexturingPipeline(Pipeline):
     def run(
         self,
         mesh: trimesh.Trimesh,
-        image: Image.Image,
+        images: List[Image.Image],
         seed: int = 42,
         tex_slat_sampler_params: dict = {},
         preprocess_image: bool = True,
@@ -387,16 +388,16 @@ class Trellis2TexturingPipeline(Pipeline):
 
         Args:
             mesh (trimesh.Trimesh): The mesh to texture.
-            image (Image.Image): The image prompt.
+            images (List[Image.Image]): The image prompts for multi-image conditioning.
             seed (int): The random seed.
             tex_slat_sampler_params (dict): Additional parameters for the texture latent sampler.
-            preprocess_image (bool): Whether to preprocess the image.
+            preprocess_image (bool): Whether to preprocess the images.
         """
         if preprocess_image:
-            image = self.preprocess_image(image)
+            images = [self.preprocess_image(img) for img in images]
         mesh = self.preprocess_mesh(mesh)
         torch.manual_seed(seed)
-        cond = self.get_cond([image], 512) if resolution == 512 else self.get_cond([image], 1024)
+        cond = self.get_cond(images, 512) if resolution == 512 else self.get_cond(images, 1024)
         shape_slat = self.encode_shape_slat(mesh, resolution)
         tex_model = self.models['tex_slat_flow_model_512'] if resolution == 512 else self.models['tex_slat_flow_model_1024']
         tex_slat = self.sample_tex_slat(

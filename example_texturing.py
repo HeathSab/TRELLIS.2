@@ -11,7 +11,7 @@ pipeline.cuda()
 # 2. Load Mesh, image & Run
 mesh = trimesh.load("assets/example_texturing/the_forgotten_knight.ply")
 image = Image.open("assets/example_texturing/image.webp")
-output = pipeline.run(mesh, image)
+output = pipeline.run(mesh, [image])
 
 # 3. Render Mesh
 output.export("textured.glb", extension_webp=True)

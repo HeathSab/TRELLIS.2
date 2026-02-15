@@ -26,18 +26,17 @@ def end_session(req: gr.Request):
     shutil.rmtree(user_dir)
 
 
-def preprocess_image(image: Image.Image) -> Image.Image:
+def preprocess_images(images: List[Image.Image]) -> List[Image.Image]:
     """
-    Preprocess the input image.
+    Preprocess the input images.
 
     Args:
-        image (Image.Image): The input image.
+        images (List[Image.Image]): The input images.
 
     Returns:
-        Image.Image: The preprocessed image.
+        List[Image.Image]: The preprocessed images.
     """
-    processed_image = pipeline.preprocess_image(image)
-    return processed_image
+    return [pipeline.preprocess_image(img) for img in images]
 
 
 def get_seed(randomize_seed: bool, seed: int) -> int:
@@ -49,7 +48,7 @@ def get_seed(randomize_seed: bool, seed: int) -> int:
 
 def shapeimage_to_tex(
     mesh_file: str,
-    image: Image.Image,
+    images: List[Image.Image],
     seed: int,
     resolution: str,
     texture_size: int,
@@ -65,7 +64,7 @@ def shapeimage_to_tex(
         mesh = mesh.to_mesh()
     output = pipeline.run(
         mesh,
-        image,
+        images,
         seed=seed,
         preprocess_image=False,
         tex_slat_sampler_params={
@@ -96,7 +95,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
     with gr.Row():
         with gr.Column(scale=1, min_width=360):
             mesh_file = gr.File(label="Upload Mesh", file_types=[".ply", ".obj", ".glb", ".gltf"], file_count="single")
-            image_prompt = gr.Image(label="Image Prompt", format="png", image_mode="RGBA", type="pil", height=400)
+            image_prompt = gr.Gallery(label="Image Prompt(s)", type="pil", height=400, columns=4)
             
             resolution = gr.Radio(["512", "1024", "1536"], label="Resolution", value="1024")
             seed = gr.Slider(0, MAX_SEED, label="Seed", value=0, step=1)
@@ -122,7 +121,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
     demo.unload(end_session)
     
     image_prompt.upload(
-        preprocess_image,
+        preprocess_images,
         inputs=[image_prompt],
         outputs=[image_prompt],
     )

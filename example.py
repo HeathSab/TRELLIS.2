@@ -22,7 +22,7 @@ pipeline.cuda()
 
 # 3. Load Image & Run
 image = Image.open("assets/example_image/T.png")
-mesh = pipeline.run(image)[0]
+mesh = pipeline.run([image])[0]
 mesh.simplify(16777216) # nvdiffrast limit
 
 # 4. Render Video
